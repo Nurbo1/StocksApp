@@ -11,6 +11,7 @@ class ViewController: UIViewController, UISearchBarDelegate {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        print("sa")
         view.backgroundColor = UIColor.white
         setupViews()
         setupLayouts()
