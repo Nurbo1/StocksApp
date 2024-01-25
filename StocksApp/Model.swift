@@ -6,3 +6,12 @@
 //
 
 import Foundation
+
+struct Cell{
+    var logo: String
+    var abrevv: String
+    var companyName: String
+    var price: String
+    var dayDelta: String
+    
+}
