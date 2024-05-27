@@ -22,6 +22,8 @@ class ViewController: UIViewController {
     let coreData = CoreDataManager()
     
     var isSearching = false
+        
+    let refreshControl = UIRefreshControl()
     
     
     override func viewDidLoad() {
@@ -30,7 +32,7 @@ class ViewController: UIViewController {
         setupUI()
         setupDelegates()
         loadData()
-        
+        setupRefreshConrol()
     }
     
     
@@ -78,6 +80,24 @@ class ViewController: UIViewController {
 //            self.networking.saveStockToCoreData(with: self.finalDictionary)
         }
 //        networking.cleanCoreData()
+    }
+    
+    func setupRefreshConrol(){
+        refreshControl.attributedTitle = NSAttributedString(string: "Pull to refresh")
+        refreshControl.addTarget(self, action: #selector(self.refresh(_:)), for: .valueChanged)
+        tableView.addSubview(refreshControl)
+    }
+    
+    @objc func refresh(_ sender: AnyObject){
+        refreshControl.endRefreshing()
+        
+        if menuBar.favListButtonIsActive {
+            tableData = finalDictionary.filter { $0.value.isFavourite }
+        } else {
+            tableData = finalDictionary
+        }
+
+        tableView.reloadData()
     }
     
     func setupTableView(){
