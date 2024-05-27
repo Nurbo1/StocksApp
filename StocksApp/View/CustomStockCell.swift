@@ -10,16 +10,15 @@ import UIKit
 
 
 
-protocol CustomStockCellDelegate{
+protocol CustomStockCellDelegate: AnyObject{
     func favButtonPressed(with abbrevText:String)
 }
 
 
 class CustomStockCell: UITableViewCell{
     var favButtonIsActive: Bool = false
-    var delegate:CustomStockCellDelegate?
+    weak var delegate:CustomStockCellDelegate? //retain cycle avoidance
     static let identifier = "stockCell"
-    
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super .init(style: .default, reuseIdentifier: reuseIdentifier)
@@ -45,37 +44,50 @@ class CustomStockCell: UITableViewCell{
         }
     }
     
-    func setupCellData(data:CellModel?){
+    func setupCellData(data: CellData?){
         guard let data=data else{
             return
         }
         ticker.text = data.ticker
-        companyName.text = data.name
-        updateFavoriteButton(isFavorite: data.isFavourite ?? false)
-
+        companyName.text = data.companyName
+        logo.image = data.logo
+        price.text = data.price
+        setupDayDelta(dp: data.dayDelta)
+        updateFavoriteButton(isFavorite: data.isFavourite)
+        favButtonIsActive = data.isFavourite
+    }
+    
+    func setupDayDelta(dp: String){
+        dayDelta.text = dp
+        if(Float(dp) ?? 0 >= 0){
+            self.dayDelta.textColor = UIColor.green
+        }else{
+            self.dayDelta.textColor = UIColor.red
+        }
     }
     
     
     @objc func favButtonPressed(){
-        delegate?.favButtonPressed(with: self.ticker.text!)
-        favButtonIsActive.toggle()
-        updateFavoriteButton(isFavorite: favButtonIsActive)
+        delegate?.favButtonPressed(with: self.ticker.text ?? "wrong ticker")
+        self.favButtonIsActive.toggle()
+        updateFavoriteButton(isFavorite: self.favButtonIsActive)
     }
     
     func updateFavoriteButton(isFavorite: Bool) {
-        if favButtonIsActive {
-            favButton.setImage(UIImage(named: "favButtonActive"), for: .normal)
+        if isFavorite {
+            self.favButton.setImage(UIImage(named: "favButtonActive"), for: .normal)
         } else {
-            favButton.setImage(UIImage(named: "favButtonInactive"), for: .normal)
+            self.favButton.setImage(UIImage(named: "favButtonInactive"), for: .normal)
         }
     }
     
     // MARK: - UI Items
     
-    let logo: UIImageView = {
+    var logo: UIImageView = {
         let imageView  = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.image = UIImage(named: "Kaspi")
+        imageView.contentMode = .scaleAspectFit  // Ensure correct image scaling
         return imageView
     }()
     
@@ -99,7 +111,8 @@ class CustomStockCell: UITableViewCell{
     let favButton: UIButton = {
         let button = UIButton()
         button.translatesAutoresizingMaskIntoConstraints = false
-//        button.isUserInteractionEnabled = true
+        button.isUserInteractionEnabled = true
+        button.isEnabled = true
         button.setImage(UIImage(named: "favButtonInactive"), for: .normal)
         button.addTarget(self, action: #selector(favButtonPressed), for: .touchUpInside)
         return button
@@ -120,7 +133,6 @@ class CustomStockCell: UITableViewCell{
         label.text = "default"
         label.font = UIFont.systemFont(ofSize: 12)
         label.textColor = .green
-        
         return label
     }()
     

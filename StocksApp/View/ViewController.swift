@@ -7,28 +7,44 @@
 
 import UIKit
 
-class ViewController: UIViewController, UISearchBarDelegate {
+
+
+class ViewController: UIViewController {
     
-    var dictionary: [String : CellModel] = CellModel.readJSONFile() ?? [:]
-    var tableData: [String: CellModel] = [:]
+    var tableData: [String: CellData] = [:]
+    
+    var primaryArray: [Stock] = Stock.readStockFile() ?? []
+    
+    let networking = StocksViewModel()
+    
+    var finalDictionary: [String: CellData] = [:]
+    
+    let coreData = CoreDataManager()
+    
+    var isSearching = false
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor.white
-        setupViews()
-        setupLayouts()
-        tableView.register(CustomStockCell.self, forCellReuseIdentifier: CustomStockCell.identifier)
-        setupTableView()
+        setupUI()
         setupDelegates()
+        loadData()
         
-        tableData = dictionary
     }
+    
     
     func setupDelegates(){
         menuBar.delegate = self
     }
     
     // MARK: - UI Items
+    func setupUI(){
+        setupViews()
+        setupLayouts()
+        tableView.register(CustomStockCell.self, forCellReuseIdentifier: CustomStockCell.identifier)
+        setupTableView()
+    }
     
     var searchBar: UISearchBar = {
         let searchBar = UISearchBar()
@@ -36,8 +52,9 @@ class ViewController: UIViewController, UISearchBarDelegate {
         searchBar.translatesAutoresizingMaskIntoConstraints = false
         searchBar.layer.cornerRadius = 20
         searchBar.layer.borderWidth = 1
-        searchBar.searchTextField.backgroundColor = UIColor.white // Text field background color
+        searchBar.searchTextField.backgroundColor = UIColor.white
         searchBar.searchTextField.textColor = UIColor.black
+        searchBar.searchBarStyle = .minimal
         return searchBar
     }()
     
@@ -48,6 +65,21 @@ class ViewController: UIViewController, UISearchBarDelegate {
     
     let tableView = UITableView()
     
+
+    
+    
+    // MARK: - Layout setup and Views and Initial setups
+    
+    func loadData(){
+        networking.getStockData(stockArray: primaryArray) { data in
+            self.finalDictionary = data
+            self.tableData = self.finalDictionary
+            self.tableView.reloadData()
+//            self.networking.saveStockToCoreData(with: self.finalDictionary)
+        }
+//        networking.cleanCoreData()
+    }
+    
     func setupTableView(){
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.dataSource = self
@@ -55,11 +87,8 @@ class ViewController: UIViewController, UISearchBarDelegate {
         tableView.allowsSelection = false
         tableView.showsVerticalScrollIndicator = false
         tableView.separatorStyle = .none
+        tableView.keyboardDismissMode = .onDrag
     }
-    
-    
-    // MARK: - Layout setup and Views
-    
     
     func setupViews(){
         view.addSubview(searchBar)
@@ -96,20 +125,19 @@ class ViewController: UIViewController, UISearchBarDelegate {
 
 extension ViewController:CustomStockCellDelegate{
     func favButtonPressed(with ticker: String) {
-        
-        
+        finalDictionary[ticker]?.isFavourite.toggle()
+        coreData.updateStockInCoreData(with: ticker, cellDataItem: finalDictionary[ticker]!)
     }
 }
 
 extension ViewController: PrimaryMenuDelegate{
     func favListButtonPressed(with isPressed: Bool) {
-        print()
-        if(isPressed){
-            tableData = dictionary.filter { $0.value.isFavourite == true }
-        }else{
-            tableData = dictionary
-        }
-        tableView.reloadData()
+                if(isPressed){
+                    tableData = finalDictionary.filter { $0.value.isFavourite == true }
+                }else{
+                    tableData = finalDictionary
+                }
+        self.tableView.reloadData()
     }
 }
 
@@ -123,8 +151,9 @@ extension ViewController: UITableViewDataSource, UITableViewDelegate{
             return UITableViewCell()
         }
         
-        let keys = Array(tableData.keys)
-        cell.setupCellData(data: tableData[keys[indexPath.row]])
+        let key = Array(tableData.keys).sorted()[indexPath.row]
+        
+        cell.setupCellData(data: tableData[key])
         cell.setCellColor(i: indexPath.row)
         cell.delegate = self
         return cell
@@ -135,6 +164,31 @@ extension ViewController: UITableViewDataSource, UITableViewDelegate{
     }
     
 }
+
+extension ViewController: UISearchBarDelegate{
+    func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
+        isSearching = true
+    }
+    
+    func searchBarTextDidEndEditing(_ searchBar: UISearchBar) {
+        isSearching = false
+        view.endEditing(true)
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchText.isEmpty{
+            tableData = self.finalDictionary
+        }else{
+            
+            tableData = tableData.filter({ (key: String, value: CellData) in
+                key.localizedCaseInsensitiveContains(searchText)
+            })
+        }
+        isSearching = false
+        tableView.reloadData()
+    }
+}
+
 
 
 
